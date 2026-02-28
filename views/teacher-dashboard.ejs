@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teacher Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-white">
+    <div class="container py-4">
+        <div class="d-flex justify-content-between mb-4">
+            <h4>Giáo viên: <%= user.user %></h4>
+            <a href="/logout" class="btn btn-outline-danger btn-sm">Thoát</a>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card bg-secondary mb-3 shadow">
+                    <div class="card-header bg-primary">TẠO BÀI THI MỚI</div>
+                    <div class="card-body">
+                        <form action="/publish-exam" method="POST">
+                            <input name="examName" class="form-control mb-2" placeholder="Tên bài thi (VD: Toán Tiết 1)" required>
+                            <input name="examLink" class="form-control mb-2" placeholder="Link Google Form" required>
+                            <button class="btn btn-success w-100">Publish</button>
+                        </form>
+                    </div>
+                </div>
+                <button class="btn btn-warning w-100 mb-3">Kiểm tra cổng COM</button>
+            </div>
+            <div class="col-md-8">
+                <div class="card shadow text-dark">
+                    <div class="card-header bg-danger text-white d-flex justify-content-between">
+                        <b>VI PHẠM REAL-TIME</b>
+                        <small id="sync-status">Đang đợi dữ liệu...</small>
+                    </div>
+                    <div class="card-body bg-light" style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-sm align-middle">
+                            <thead class="table-dark">
+                                <tr><th>Học sinh</th><th>Bài thi</th><th>Lý do</th><th>Ảnh</th></tr>
+                            </thead>
+                            <tbody id="violation-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function loadViolations() {
+            fetch('/get-violations').then(res => res.json()).then(data => {
+                const body = document.getElementById('violation-list');
+                body.innerHTML = data.reverse().map(v => `
+                    <tr>
+                        <td><b>${v.user}</b></td>
+                        <td><small>${v.exam}</small></td>
+                        <td><span class="badge bg-danger">${v.reason}</span></td>
+                        <td><a href="${v.imagePath}" target="_blank"><img src="${v.imagePath}" width="60"></a></td>
+                    </tr>
+                `).join('');
+                document.getElementById('sync-status').innerText = "Cập nhật: " + new Date().toLocaleTimeString();
+            });
+        }
+        setInterval(loadViolations, 4000);
+        loadViolations();
+    </script>
+</body>
+</html>
