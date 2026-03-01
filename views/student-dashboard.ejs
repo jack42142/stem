@@ -1,60 +1,57 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Học sinh - Mobile Ready</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học sinh - Thi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/handtrackjs/dist/handtrack.min.js"></script>
     <style>
-        /* Tối ưu cho Mobile */
-        #myvideo { background: #000; border-radius: 8px; width: 100%; transform: scaleX(-1); min-height: 300px; object-fit: cover; }
-        #countdown-ui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; color: red; font-weight: bold; display: none; z-index: 20; text-shadow: 2px 2px 5px black; }
-        
-        /* Lớp phủ bắt buộc nhấn để mở Camera trên iOS */
-        #camera-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); color: white; display: flex;
-            flex-direction: column; align-items: center; justify-content: center;
-            z-index: 30; border-radius: 8px; text-align: center; padding: 20px;
-        }
+        body { background-color: #f4f7f6; }
+        .video-box { position: relative; background: #000; border-radius: 12px; width: 100%; aspect-ratio: 4/3; overflow: hidden; border: 4px solid #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        #myvideo { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        #camera-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; color: #333; display: flex; align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 20px; }
+        .camera-active #camera-overlay { display: none !important; }
+        #ai-status { position: absolute; bottom: 0; width: 100%; background: rgba(255,255,255,0.9); color: #333; text-align: center; padding: 8px; font-weight: bold; border-top: 1px solid #dee2e6; }
+        iframe { border-radius: 12px; background: #fff; }
     </style>
 </head>
-<body class="bg-light">
-    <div class="container-fluid py-2">
+<body class="py-3">
+    <div class="container-fluid">
         <div class="row g-3">
-            <div class="col-lg-8">
-                <div class="card mb-2 shadow-sm">
-                    <div class="card-body p-2 d-flex align-items-center">
-                        <select id="exam-select" class="form-select form-select-sm w-auto" onchange="changeExam()">
-                            <option value="">-- Chọn bài thi --</option>
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm p-3 mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <h6 class="mb-0 fw-bold">Chọn bài thi:</h6>
+                        <select id="exam-select" class="form-select w-auto" onchange="changeExam()">
+                            <option value="">-- Danh sách bài thi --</option>
                             <% exams.forEach(exam => { %>
-                                <option value="<%= exam.link %>" data-name="<%= exam.name %>"><%= exam.name %></option>
+                                <option value="<%= exam.id %>" data-link="<%= exam.link %>" data-policy='<%= JSON.stringify(exam.policy) %>'><%= exam.name %></option>
                             <% }) %>
                         </select>
-                        <b id="current-exam-title" class="ms-auto text-primary"></b>
                     </div>
                 </div>
-                <iframe id="exam-frame" src="" width="100%" height="700px" class="d-none shadow-sm bg-white" style="border-radius:10px; border:none;"></iframe>
-                <div id="no-exam" class="text-center p-5 bg-white rounded shadow-sm">
-                    <h5>Chọn bài thi để bắt đầu</h5>
-                </div>
+                <iframe id="frame" src="" width="100%" height="75vh" class="d-none border-0 shadow-sm"></iframe>
             </div>
 
-            <div class="col-lg-4">
-                <div class="card shadow border-danger">
-                    <div class="card-header bg-danger text-white text-center font-weight-bold py-1 small">HỆ THỐNG GIÁM SÁT</div>
-                    <div class="card-body p-0 position-relative" style="min-height: 300px;">
-                        
-                        <div id="camera-overlay">
-                            <p class="small">Safari/Chrome yêu cầu bạn xác nhận mở Camera</p>
-                            <button class="btn btn-primary btn-sm" onclick="startSystem()">MỞ CAMERA & GIÁM SÁT</button>
+            <div class="col-md-4">
+                <div class="video-box" id="cam-container">
+                    <div id="camera-overlay">
+                        <div>
+                            <p class="mb-3 text-muted">Nhấn nút bên dưới để bắt đầu giám sát</p>
+                            <button class="btn btn-primary fw-bold px-4" onclick="initCam()">KÍCH HOẠT CAMERA</button>
                         </div>
-
-                        <video id="myvideo" autoplay playsinline muted></video>
-                        <div id="countdown-ui">4</div>
-                        <canvas id="canvas" class="d-none"></canvas>
-                        <div id="ai-status" class="bg-dark text-white text-center py-2 small font-weight-bold">Chờ kích hoạt...</div>
                     </div>
+                    <video id="myvideo" autoplay playsinline muted></video>
+                    <canvas id="canvas" class="d-none"></canvas>
+                    <div id="ai-status">TRẠNG THÁI: CHỜ...</div>
+                </div>
+                <div class="card mt-3 border-0 shadow-sm p-3 bg-white">
+                    <h6 class="fw-bold mb-2">Quy định phòng thi:</h6>
+                    <ul class="small text-muted ps-3 mb-0">
+                        <li>Không rời khỏi vị trí khi đang làm bài.</li>
+                        <li>Không mở tab/cửa sổ khác.</li>
+                        <li>AI sẽ tự động báo cáo nếu phát hiện vi phạm.</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -62,110 +59,66 @@
 
     <script>
         const video = document.getElementById("myvideo");
-        const aiStatus = document.getElementById("ai-status");
-        const countdownUI = document.getElementById("countdown-ui");
-        const canvas = document.getElementById("canvas");
-        const overlay = document.getElementById("camera-overlay");
-        
-        let model = null;
-        let currentExamName = "";
-        let violationInterval = null;
+        const camContainer = document.getElementById("cam-container");
+        let model, currentExamId, currentPolicy = {}, isViolating = false;
 
-        // 1. KÍCH HOẠT HỆ THỐNG (Dành cho iOS Safari)
-        function startSystem() {
-            overlay.innerHTML = "<p>Đang khởi tạo AI...</p>";
-            
-            // Cấu hình Camera cho Mobile
-            const constraints = {
-                video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
-                audio: false
-            };
+        async function initCam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    camContainer.classList.add("camera-active");
+                    loadAI();
+                };
+            } catch (e) { alert("Không thể mở Camera. Hãy cấp quyền hoặc dùng localhost/https."); }
+        }
 
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then(stream => {
-                    video.srcObject = stream;
-                    // Sau khi stream thành công, load model AI
-                    handTrack.load({ flipHorizontal: true, maxNumBoxes: 2, scoreThreshold: 0.6 }).then(lmodel => {
-                        model = lmodel;
-                        overlay.style.display = "none"; // Ẩn overlay khi mọi thứ sẵn sàng
-                        detect();
-                    });
-                })
-                .catch(err => {
-                    alert("Lỗi: Không thể mở Camera. Hãy đảm bảo bạn đang dùng HTTPS!");
-                    overlay.innerHTML = "<button class='btn btn-danger' onclick='location.reload()'>Thử lại</button>";
-                });
+        async function loadAI() {
+            document.getElementById("ai-status").innerText = "ĐANG TẢI AI...";
+            model = await handtrack.load({ scoreThreshold: 0.6 });
+            document.getElementById("ai-status").innerText = "SẴN SÀNG GIÁM SÁT ✅";
+            detect();
+        }
+
+        function changeExam() {
+            const sel = document.getElementById('exam-select');
+            const opt = sel.options[sel.selectedIndex];
+            if (!sel.value) return;
+            currentExamId = sel.value;
+            currentPolicy = JSON.parse(opt.getAttribute('data-policy'));
+            document.getElementById("frame").src = opt.getAttribute('data-link');
+            document.getElementById("frame").classList.remove('d-none');
         }
 
         function detect() {
-            model.detect(video).then(predictions => {
-                const count = predictions.filter(p => p.label !== 'point').length;
+            if (!currentPolicy.enableAI) return;
+            model.detect(video).then(preds => {
+                const count = preds.filter(p => p.label !== 'point').length;
+                const statusEl = document.getElementById("ai-status");
                 if (count === 1) {
-                    aiStatus.innerText = "✅ HỢP LỆ";
-                    aiStatus.className = "bg-success text-white text-center py-2";
-                    resetCountdown();
+                    statusEl.innerText = "HỢP LỆ ✅"; statusEl.style.color = "#28a745";
+                    isViolating = false;
                 } else {
-                    aiStatus.innerText = count > 1 ? `⚠️ ${count} NGƯỜI` : "❌ KHÔNG THẤY MẶT";
-                    aiStatus.className = "bg-danger text-white text-center py-2";
-                    if (currentExamName) startCountdown();
+                    const r = count > 1 ? `⚠️ PHÁT HIỆN ${count} NGƯỜI` : "❌ VẮNG MẶT";
+                    statusEl.innerText = r; statusEl.style.color = "#dc3545";
+                    if (currentExamId && !isViolating) { isViolating = true; sendV(r); }
                 }
                 requestAnimationFrame(detect);
             });
         }
 
-        // Các hàm xử lý vi phạm (Giữ nguyên logic cũ)
-        function changeExam() {
-            const select = document.getElementById('exam-select');
-            currentExamName = select.options[select.selectedIndex].getAttribute('data-name');
-            const frame = document.getElementById("exam-frame");
-            if (select.value) {
-                frame.src = select.value + "?embedded=true";
-                frame.classList.remove('d-none');
-                document.getElementById("no-exam").classList.add('d-none');
-                document.getElementById("current-exam-title").innerText = "Bài: " + currentExamName;
-            }
-        }
-
-        function startCountdown() {
-            if (violationInterval) return;
-            let sec = 4;
-            countdownUI.style.display = "block";
-            violationInterval = setInterval(() => {
-                sec--;
-                countdownUI.innerText = sec;
-                if (sec <= 0) {
-                    resetCountdown();
-                    sendViolation("Vi phạm Camera (4s)");
-                }
-            }, 1000);
-        }
-
-        function resetCountdown() {
-            clearInterval(violationInterval);
-            violationInterval = null;
-            countdownUI.style.display = "none";
-            countdownUI.innerText = "4";
-        }
-
-        function sendViolation(reason) {
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
+        function sendV(reason) {
+            const canvas = document.getElementById("canvas");
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             fetch('/report-violation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    user: '<%= user.user %>', 
-                    image: canvas.toDataURL('image/png'), 
-                    reason,
-                    examName: currentExamName 
-                })
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user: '<%= user.user %>', image: canvas.toDataURL('image/png'), reason, examId: currentExamId })
             });
         }
 
-        // Báo cáo rời Web
-        window.onblur = () => { if(currentExamName) sendViolation("Rời khỏi trình duyệt"); };
-        document.addEventListener('visibilitychange', () => { if(document.hidden && currentExamName) sendViolation("Chuyển tab"); });
+        window.onblur = () => { if(currentExamId && currentPolicy.antiTab) { sendV("Rời tab thi"); }};
     </script>
 </body>
 </html>

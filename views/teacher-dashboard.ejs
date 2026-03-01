@@ -1,64 +1,112 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Teacher Panel</title>
+    <title>Giảng viên Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; color: #333; }
+        .header-top { background: #fff; border-bottom: 1px solid #dee2e6; padding: 15px 0; margin-bottom: 30px; }
+        .card-custom { background: #fff; border: 1px solid #dee2e6; border-radius: 12px; }
+        .bg-light-ins { background-color: #f1f3f5; padding: 15px; border-radius: 10px; border: 1px solid #e9ecef; }
+        .exam-item { background: #fff; border: 1px solid #dee2e6; border-radius: 10px; margin-bottom: 12px; padding: 15px; border-left: 5px solid #007bff; }
+        .form-check-label { color: #495057 !important; font-weight: 500; }
+    </style>
 </head>
-<body class="bg-dark text-white">
-    <div class="container py-4">
-        <div class="d-flex justify-content-between mb-4">
-            <h4>Giáo viên: <%= user.user %></h4>
-            <a href="/logout" class="btn btn-outline-danger btn-sm">Thoát</a>
+<body>
+    <div class="header-top">
+        <div class="container d-flex justify-content-between align-items-center">
+            <h4 class="mb-0 fw-bold text-primary">Dashboard Giảng viên</h4>
+            <div>
+                <span class="me-3">Chào, <b><%= user.user %></b></span>
+                <a href="/logout" class="btn btn-sm btn-outline-danger">Đăng xuất</a>
+            </div>
         </div>
+    </div>
+
+    <div class="container">
         <div class="row">
             <div class="col-md-4">
-                <div class="card bg-secondary mb-3 shadow">
-                    <div class="card-header bg-primary">TẠO BÀI THI MỚI</div>
+                <div class="card card-custom shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom fw-bold py-3 text-primary">CÀI ĐẶT BÀI THI MỚI</div>
                     <div class="card-body">
                         <form action="/publish-exam" method="POST">
-                            <input name="examName" class="form-control mb-2" placeholder="Tên bài thi (VD: Toán Tiết 1)" required>
-                            <input name="examLink" class="form-control mb-2" placeholder="Link Google Form" required>
-                            <button class="btn btn-success w-100">Publish</button>
+                            <label class="small fw-bold text-muted">Tên bài thi</label>
+                            <input name="examName" class="form-control mb-3" placeholder="..." required>
+                            
+                            <label class="small fw-bold text-muted">Link bài thi (Google Form)</label>
+                            <input name="examLink" class="form-control mb-3" placeholder="https://..." required>
+                            
+                            <div class="bg-light-ins mb-3">
+                                <p class="small text-muted mb-2 fw-bold">CHẾ ĐỘ BẢO MẬT:</p>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" name="antiTab" id="s1" checked>
+                                    <label class="form-check-label" for="s1">Chống rời Tab thi</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="enableAI" id="s2" checked>
+                                    <label class="form-check-label" for="s2">Giám sát AI Camera</label>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary w-100 fw-bold py-2 shadow-sm">BẮT ĐẦU BUỔI THI</button>
                         </form>
                     </div>
                 </div>
-                <button class="btn btn-warning w-100 mb-3">Kiểm tra cổng COM</button>
             </div>
+
             <div class="col-md-8">
-                <div class="card shadow text-dark">
-                    <div class="card-header bg-danger text-white d-flex justify-content-between">
-                        <b>VI PHẠM REAL-TIME</b>
-                        <small id="sync-status">Đang đợi dữ liệu...</small>
-                    </div>
-                    <div class="card-body bg-light" style="max-height: 500px; overflow-y: auto;">
-                        <table class="table table-sm align-middle">
-                            <thead class="table-dark">
-                                <tr><th>Học sinh</th><th>Bài thi</th><th>Lý do</th><th>Ảnh</th></tr>
-                            </thead>
-                            <tbody id="violation-list"></tbody>
-                        </table>
+                <div class="card card-custom shadow-sm overflow-hidden">
+                    <div class="card-header bg-white border-bottom fw-bold py-3 text-danger">QUẢN LÝ VI PHẠM</div>
+                    <div class="card-body p-4" style="max-height: 600px; overflow-y: auto;">
+                        <% exams.reverse().forEach(exam => { %>
+                            <div class="exam-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1 fw-bold"><%= exam.name %></h6>
+                                    <small class="text-muted">Tổng số vi phạm: <span class="badge bg-danger"><%= exam.logs.length %></span></small>
+                                </div>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-info text-white" onclick='viewLogs(<%- JSON.stringify(exam.logs) %>)'>Xem Nhật ký</button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="deleteExam('<%= exam.id %>')">Xóa</button>
+                                </div>
+                            </div>
+                        <% }) %>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="logModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-light"><h5 class="modal-title fw-bold">Báo cáo vi phạm chi tiết</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Thời gian</th><th>Học sinh</th><th>Lý do</th><th>Ảnh</th></tr></thead>
+                        <tbody id="log-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function loadViolations() {
-            fetch('/get-violations').then(res => res.json()).then(data => {
-                const body = document.getElementById('violation-list');
-                body.innerHTML = data.reverse().map(v => `
-                    <tr>
-                        <td><b>${v.user}</b></td>
-                        <td><small>${v.exam}</small></td>
-                        <td><span class="badge bg-danger">${v.reason}</span></td>
-                        <td><a href="${v.imagePath}" target="_blank"><img src="${v.imagePath}" width="60"></a></td>
-                    </tr>
-                `).join('');
-                document.getElementById('sync-status').innerText = "Cập nhật: " + new Date().toLocaleTimeString();
-            });
+        function viewLogs(logs) {
+            document.getElementById('log-body').innerHTML = logs.reverse().map(l => `
+                <tr>
+                    <td class="small">${l.time}</td>
+                    <td><b>${l.student}</b></td>
+                    <td><span class="badge bg-warning text-dark">${l.reason}</span></td>
+                    <td><img src="${l.imagePath}" width="60" class="rounded shadow-sm border"></td>
+                </tr>`).join('') || '<tr><td colspan="4" class="text-center p-3">Chưa có vi phạm nào.</td></tr>';
+            new bootstrap.Modal(document.getElementById('logModal')).show();
         }
-        setInterval(loadViolations, 4000);
-        loadViolations();
+        async function deleteExam(id) {
+            if(confirm('Bạn có chắc chắn muốn xóa bài thi và dữ liệu vi phạm này?')) {
+                await fetch('/delete-exam', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id}) });
+                location.reload();
+            }
+        }
     </script>
 </body>
 </html>
