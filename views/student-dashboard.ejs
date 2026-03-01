@@ -1,124 +1,116 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Học sinh - Thi</title>
+    <meta charset="UTF-8">
+    <title>Phòng Thi - MediaPipe AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/handtrackjs/dist/handtrack.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <style>
-        body { background-color: #f4f7f6; }
-        .video-box { position: relative; background: #000; border-radius: 12px; width: 100%; aspect-ratio: 4/3; overflow: hidden; border: 4px solid #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        #myvideo { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        #camera-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; color: #333; display: flex; align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 20px; }
-        .camera-active #camera-overlay { display: none !important; }
-        #ai-status { position: absolute; bottom: 0; width: 100%; background: rgba(255,255,255,0.9); color: #333; text-align: center; padding: 8px; font-weight: bold; border-top: 1px solid #dee2e6; }
-        iframe { border-radius: 12px; background: #fff; }
+        #myvideo { background: #000; border-radius: 8px; width: 100%; transform: scaleX(-1); }
+        #countdown-ui { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 60px; color: red; font-weight: bold; display: none; z-index: 20; }
+        #camera-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); color: white; display: flex; align-items: center; justify-content: center; z-index: 30; border-radius: 8px; }
+        iframe { border: none; height: 85vh; width: 100%; background: #fff; }
     </style>
 </head>
-<body class="py-3">
-    <div class="container-fluid">
-        <div class="row g-3">
-            <div class="col-md-8">
-                <div class="card border-0 shadow-sm p-3 mb-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <h6 class="mb-0 fw-bold">Chọn bài thi:</h6>
-                        <select id="exam-select" class="form-select w-auto" onchange="changeExam()">
-                            <option value="">-- Danh sách bài thi --</option>
+<body class="bg-light">
+    <div class="container-fluid py-2">
+        <div class="row g-2">
+            <div class="col-md-9">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white d-flex align-items-center p-2">
+                        <select id="exam-select" class="form-select form-select-sm w-auto" onchange="changeExam()">
+                            <option value="">-- Chọn bài thi --</option>
                             <% exams.forEach(exam => { %>
-                                <option value="<%= exam.id %>" data-link="<%= exam.link %>" data-policy='<%= JSON.stringify(exam.policy) %>'><%= exam.name %></option>
+                                <option value="<%= exam.link %>" data-name="<%= exam.name %>" data-settings='<%= JSON.stringify(exam.settings) %>'><%= exam.name %></option>
                             <% }) %>
                         </select>
+                        <b id="exam-title" class="ms-3 text-primary"></b>
                     </div>
+                    <iframe id="exam-frame" class="d-none"></iframe>
+                    <div id="no-exam" class="text-center py-5"><h5>Vui lòng chọn bài thi và khởi động AI</h5></div>
                 </div>
-                <iframe id="frame" src="" width="100%" height="75vh" class="d-none border-0 shadow-sm"></iframe>
             </div>
-
-            <div class="col-md-4">
-                <div class="video-box" id="cam-container">
-                    <div id="camera-overlay">
-                        <div>
-                            <p class="mb-3 text-muted">Nhấn nút bên dưới để bắt đầu giám sát</p>
-                            <button class="btn btn-primary fw-bold px-4" onclick="initCam()">KÍCH HOẠT CAMERA</button>
-                        </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-danger">
+                    <div class="card-header bg-danger text-white text-center py-1 small fw-bold">GIÁM SÁT AI</div>
+                    <div class="card-body p-0 position-relative">
+                        <div id="camera-overlay"><button class="btn btn-primary btn-sm shadow" onclick="startSystem()">BẮT ĐẦU THI</button></div>
+                        <video id="myvideo" autoplay playsinline muted></video>
+                        <div id="countdown-ui">4</div>
+                        <div id="ai-status" class="bg-dark text-white text-center py-2 small fw-bold">Chờ...</div>
                     </div>
-                    <video id="myvideo" autoplay playsinline muted></video>
-                    <canvas id="canvas" class="d-none"></canvas>
-                    <div id="ai-status">TRẠNG THÁI: CHỜ...</div>
                 </div>
-                <div class="card mt-3 border-0 shadow-sm p-3 bg-white">
-                    <h6 class="fw-bold mb-2">Quy định phòng thi:</h6>
-                    <ul class="small text-muted ps-3 mb-0">
-                        <li>Không rời khỏi vị trí khi đang làm bài.</li>
-                        <li>Không mở tab/cửa sổ khác.</li>
-                        <li>AI sẽ tự động báo cáo nếu phát hiện vi phạm.</li>
-                    </ul>
-                </div>
+                <div id="sec-info" class="mt-2 small text-muted p-2 bg-white rounded border"></div>
+                <canvas id="canvas" class="d-none"></canvas>
             </div>
         </div>
     </div>
-
     <script>
         const video = document.getElementById("myvideo");
-        const camContainer = document.getElementById("cam-container");
-        let model, currentExamId, currentPolicy = {}, isViolating = false;
+        const aiStatus = document.getElementById("ai-status");
+        const countdownUI = document.getElementById("countdown-ui");
+        const canvas = document.getElementById("canvas");
+        const overlay = document.getElementById("camera-overlay");
+        let faceDetection = null, currentExam = null, violationInterval = null;
 
-        async function initCam() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    video.play();
-                    camContainer.classList.add("camera-active");
-                    loadAI();
-                };
-            } catch (e) { alert("Không thể mở Camera. Hãy cấp quyền hoặc dùng localhost/https."); }
+        function startSystem() {
+            overlay.innerHTML = "<p class='small'>Đang tải AI...</p>";
+            faceDetection = new FaceDetection({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}` });
+            faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.6 });
+            faceDetection.onResults(onResults);
+            const camera = new Camera(video, { onFrame: async () => { await faceDetection.send({image: video}); }, width: 640, height: 480 });
+            camera.start().then(() => { overlay.style.display = "none"; if (currentExam?.settings.vm) checkVM(); });
         }
 
-        async function loadAI() {
-            document.getElementById("ai-status").innerText = "ĐANG TẢI AI...";
-            model = await handtrack.load({ scoreThreshold: 0.6 });
-            document.getElementById("ai-status").innerText = "SẴN SÀNG GIÁM SÁT ✅";
-            detect();
+        function onResults(results) {
+            if (!currentExam?.settings.ai) return;
+            const count = results.detections.length;
+            if (count === 1) {
+                aiStatus.innerText = "✅ HỢP LỆ";
+                aiStatus.className = "bg-success text-white text-center py-2 small fw-bold";
+                resetCountdown();
+            } else {
+                aiStatus.innerText = count > 1 ? `⚠️ ${count} NGƯỜI` : "❌ KHÔNG THẤY MẶT";
+                aiStatus.className = "bg-danger text-white text-center py-2 small fw-bold";
+                startCountdown();
+            }
         }
 
         function changeExam() {
-            const sel = document.getElementById('exam-select');
-            const opt = sel.options[sel.selectedIndex];
-            if (!sel.value) return;
-            currentExamId = sel.value;
-            currentPolicy = JSON.parse(opt.getAttribute('data-policy'));
-            document.getElementById("frame").src = opt.getAttribute('data-link');
-            document.getElementById("frame").classList.remove('d-none');
+            const select = document.getElementById('exam-select'), option = select.options[select.selectedIndex];
+            if (!select.value) return;
+            currentExam = { name: option.getAttribute('data-name'), link: select.value, settings: JSON.parse(option.getAttribute('data-settings')) };
+            document.getElementById("exam-frame").src = currentExam.link;
+            document.getElementById("exam-frame").classList.remove('d-none');
+            document.getElementById("no-exam").classList.add('d-none');
+            document.getElementById("exam-title").innerText = "Bài thi: " + currentExam.name;
+            document.getElementById("sec-info").innerHTML = `<b>Bảo mật:</b><br>${currentExam.settings.ai ? '✅ AI Face<br>' : ''}${currentExam.settings.antiTab ? '✅ Anti-Tab<br>' : ''}${currentExam.settings.vm ? '✅ VM Check' : ''}`;
         }
 
-        function detect() {
-            if (!currentPolicy.enableAI) return;
-            model.detect(video).then(preds => {
-                const count = preds.filter(p => p.label !== 'point').length;
-                const statusEl = document.getElementById("ai-status");
-                if (count === 1) {
-                    statusEl.innerText = "HỢP LỆ ✅"; statusEl.style.color = "#28a745";
-                    isViolating = false;
-                } else {
-                    const r = count > 1 ? `⚠️ PHÁT HIỆN ${count} NGƯỜI` : "❌ VẮNG MẶT";
-                    statusEl.innerText = r; statusEl.style.color = "#dc3545";
-                    if (currentExamId && !isViolating) { isViolating = true; sendV(r); }
-                }
-                requestAnimationFrame(detect);
-            });
+        function startCountdown() {
+            if (violationInterval) return;
+            let sec = 4; countdownUI.style.display = "block";
+            violationInterval = setInterval(() => {
+                sec--; countdownUI.innerText = sec;
+                if (sec <= 0) { resetCountdown(); sendViolation("Vi phạm Camera (4s)"); }
+            }, 1000);
         }
 
-        function sendV(reason) {
-            const canvas = document.getElementById("canvas");
+        function resetCountdown() { clearInterval(violationInterval); violationInterval = null; countdownUI.style.display = "none"; countdownUI.innerText = "4"; }
+
+        function sendViolation(reason) {
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             fetch('/report-violation', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user: '<%= user.user %>', image: canvas.toDataURL('image/png'), reason, examId: currentExamId })
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user: '<%= user.user %>', image: canvas.toDataURL('image/png'), reason, examName: currentExam ? currentExam.name : "N/A" })
             });
         }
 
-        window.onblur = () => { if(currentExamId && currentPolicy.antiTab) { sendV("Rời tab thi"); }};
+        window.onblur = () => { if(currentExam?.settings.antiTab) sendViolation("Rời khỏi trình duyệt"); };
+        document.addEventListener('visibilitychange', () => { if(document.hidden && currentExam?.settings.antiTab) sendViolation("Chuyển tab"); });
     </script>
 </body>
 </html>

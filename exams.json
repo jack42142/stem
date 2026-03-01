@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1772375283061,
+    "name": "test",
+    "link": "https://docs.google.com/forms/d/e/1FAIpQLScYLwiB1ylRbGkbLXfMIYHtCq3X_hHhOAsEYQUNXtS-Hd3f8A/viewform?usp=header",
+    "settings": {
+      "ai": true,
+      "antiTab": true,
+      "vm": true
+    }
+  },
+  {
+    "id": 1772375495136,
+    "name": "test",
+    "link": "https://docs.google.com/forms/d/e/1FAIpQLScYLwiB1ylRbGkbLXfMIYHtCq3X_hHhOAsEYQUNXtS-Hd3f8A/viewform?usp=header",
+    "settings": {
+      "ai": true,
+      "antiTab": true,
+      "vm": true
+    }
+  }
+]
