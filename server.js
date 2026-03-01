@@ -10,7 +10,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.set('view engine', 'ejs');
 app.use(session({
-    secret: 'secure-system-auth-2026',
+    secret: 'secure-mobile-auth-2026',
     resave: false,
     saveUninitialized: true
 }));
