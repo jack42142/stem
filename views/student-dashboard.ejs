@@ -9,58 +9,20 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <style>
         body { background: #f4f7f6; overflow-x: hidden; }
-        /* Iframe bài thi */
         iframe { border: none; width: 100%; height: 75vh; background: #fff; border-radius: 8px; }
-        
-        /* Container camera tối ưu cho mobile */
-        .cam-wrapper {
-            position: relative;
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        #myvideo { 
-            width: 100%; 
-            transform: scaleX(-1); 
-            display: block;
-            aspect-ratio: 4/3;
-            object-fit: cover;
-        }
-        
-        /* Overlay yêu cầu mở camera (iOS cần tương tác người dùng) */
-        #camera-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); color: #fff;
-            display: flex; align-items: center; justify-content: center;
-            z-index: 100; text-align: center; padding: 20px;
-        }
-
-        #countdown-ui {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 60px; color: #ff4d4d; font-weight: bold; display: none;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8); z-index: 50;
-        }
-
-        /* Chế độ Camera nổi trên Mobile */
+        .cam-wrapper { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        #myvideo { width: 100%; transform: scaleX(-1); display: block; aspect-ratio: 4/3; object-fit: cover; }
+        #camera-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); color: #fff; display: flex; align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 20px; }
+        #countdown-ui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 60px; color: #ff4d4d; font-weight: bold; display: none; text-shadow: 0 0 10px rgba(0,0,0,0.8); z-index: 50; }
         @media (max-width: 768px) {
             iframe { height: 65vh; }
-            .mobile-float-cam {
-                position: fixed; bottom: 15px; right: 15px;
-                width: 100px; z-index: 1000;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-            }
-            .mobile-float-cam #camera-overlay { font-size: 10px; padding: 5px; }
-            .mobile-float-cam button { font-size: 9px; padding: 4px 8px; }
+            .mobile-float-cam { position: fixed; bottom: 15px; right: 15px; width: 100px; z-index: 1000; }
         }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-dark bg-primary shadow-sm">
-        <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1" style="font-size: 1rem;">Hệ Thống Thi: <%= user.user %></span>
-        </div>
+        <div class="container-fluid"><span class="navbar-brand mb-0 h1">Hệ Thống Thi: <%= user.user %></span></div>
     </nav>
 
     <div class="container-fluid py-2">
@@ -77,18 +39,14 @@
                     </div>
                     <div class="card-body p-1">
                         <iframe id="exam-frame" class="d-none"></iframe>
-                        <div id="no-exam" class="text-center py-5">
-                            <p class="text-muted">Vui lòng chọn bài thi và kích hoạt Camera để bắt đầu.</p>
-                        </div>
+                        <div id="no-exam" class="text-center py-5"><p class="text-muted">Vui lòng chọn bài thi và kích hoạt Camera.</p></div>
                     </div>
                 </div>
             </div>
 
             <div class="col-lg-3 order-1 order-lg-2">
                 <div class="cam-wrapper mobile-float-cam" id="cam-container">
-                    <div id="camera-overlay">
-                        <button class="btn btn-danger btn-sm fw-bold" onclick="initAI()">KÍCH HOẠT CAMERA</button>
-                    </div>
+                    <div id="camera-overlay"><button class="btn btn-danger btn-sm fw-bold" onclick="initAI()">KÍCH HOẠT CAMERA</button></div>
                     <video id="myvideo" autoplay playsinline muted></video>
                     <div id="countdown-ui">4</div>
                     <div id="ai-status" class="bg-dark text-white text-center py-1 small" style="font-size: 10px;">Camera: Tắt</div>
@@ -105,35 +63,37 @@
         const countdownUI = document.getElementById("countdown-ui");
         const canvas = document.getElementById("canvas");
         const overlay = document.getElementById("camera-overlay");
+        const examFrame = document.getElementById("exam-frame");
+        const noExamDiv = document.getElementById("no-exam");
         let faceDetection = null, currentExam = null, timer = null;
 
-        // Chặn máy ảo
         function isVM() {
             try {
-                const gl = document.createElement('canvas').getContext('webgl');
+                const canvasVM = document.createElement('canvas');
+                const gl = canvasVM.getContext('webgl') || canvasVM.getContext('experimental-webgl');
                 if (!gl) return false;
-                const debug = gl.getExtension('WEBGL_debug_renderer_info');
-                const renderer = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL).toLowerCase();
-                return /virtualbox|vmware|swiftshader|llvmpipe/.test(renderer);
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (!debugInfo) return false;
+                const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL).toLowerCase();
+                const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase();
+                const vmKeywords = ['virtualbox', 'vmware', 'swiftshader', 'llvmpipe', 'google swiftshader', 'mesa', 'microsoft basic render', 'virtio', 'parallels'];
+                return vmKeywords.some(key => vendor.includes(key) || renderer.includes(key)) || (navigator.hardwareConcurrency < 2);
             } catch(e) { return false; }
         }
 
         async function initAI() {
-            overlay.innerHTML = "<small>Đang tải AI...</small>";
+            overlay.innerHTML = "<small>Đ Đang tải AI...</small>";
             faceDetection = new FaceDetection({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${f}` });
             faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.6 });
             faceDetection.onResults(onResults);
-
             const camera = new Camera(video, {
                 onFrame: async () => { await faceDetection.send({image: video}); },
-                width: 480, height: 360 // Thấp để mobile chạy mượt
+                width: 480, height: 360
             });
             camera.start().then(() => {
                 overlay.style.display = "none";
                 aiStatus.innerText = "Camera: Sẵn sàng";
-            }).catch(err => {
-                overlay.innerHTML = "<small class='text-danger'>Lỗi Camera. Hãy cấp quyền truy cập!</small>";
-            });
+            }).catch(err => { overlay.innerHTML = "<small class='text-danger'>Lỗi Camera!</small>"; });
         }
 
         function onResults(res) {
@@ -155,12 +115,19 @@
             if (!sel.value) return;
             currentExam = { name: opt.getAttribute('data-name'), link: sel.value, settings: JSON.parse(opt.getAttribute('data-settings')) };
             
-            if (currentExam.settings.antiVM && isVM()) report("Phát hiện Máy ảo");
+            if (currentExam.settings.antiVM && isVM()) {
+                report("SỬ DỤNG MÁY ẢO (BỊ CHẶN)");
+                examFrame.src = "";
+                examFrame.classList.add('d-none');
+                noExamDiv.innerHTML = `<div class="alert alert-danger mx-3 mt-4"><h5 class="fw-bold">PHÁT HIỆN GIAN LẬN!</h5><p>Hệ thống chặn truy cập từ Máy ảo/Giả lập.</p></div>`;
+                noExamDiv.classList.remove('d-none');
+                return;
+            }
 
-            document.getElementById("exam-frame").src = currentExam.link;
-            document.getElementById("exam-frame").classList.remove('d-none');
-            document.getElementById("no-exam").classList.add('d-none');
-            document.getElementById("sec-info").innerHTML = `<b>Bảo mật:</b> AI(${currentExam.settings.ai?'Bật':'Tắt'}), Tab(${currentExam.settings.antiTab?'Bật':'Tắt'})`;
+            examFrame.src = currentExam.link;
+            examFrame.classList.remove('d-none');
+            noExamDiv.classList.add('d-none');
+            document.getElementById("sec-info").innerHTML = `<b>Bảo mật:</b> AI(${currentExam.settings.ai?'Bật':'Tắt'}), Tab(${currentExam.settings.antiTab?'Bật':'Tắt'}), VM(Bật)`;
         }
 
         function startTimer() {
@@ -184,7 +151,6 @@
             });
         }
 
-        // Chống chuyển Tab (Hoạt động tốt trên Android/iOS Chrome/Safari)
         window.onblur = () => { if(currentExam?.settings.antiTab) report("Rời tab trình duyệt"); };
         document.addEventListener('visibilitychange', () => { if(document.hidden && currentExam?.settings.antiTab) report("Chuyển tab/ứng dụng"); });
     </script>

@@ -27,12 +27,15 @@
                         <form action="/publish-exam" method="POST">
                             <input name="examName" class="form-control mb-2" placeholder="Tên bài thi" required>
                             <input name="examLink" class="form-control mb-2" placeholder="Link Google Form" required>
-                            <div class="d-flex flex-wrap gap-2 mb-3">
+                            <div class="d-flex flex-wrap gap-3 mb-3">
                                 <div class="form-check form-switch small">
                                     <input class="form-check-input" type="checkbox" name="useAI" checked> <label>AI</label>
                                 </div>
                                 <div class="form-check form-switch small">
                                     <input class="form-check-input" type="checkbox" name="useAntiTab" checked> <label>Chặn Tab</label>
+                                </div>
+                                <div class="form-check form-switch small">
+                                    <input class="form-check-input" type="checkbox" name="useAntiVM" checked> <label>Chặn Máy ảo</label>
                                 </div>
                             </div>
                             <button class="btn btn-primary w-100 fw-bold">PUBLISH</button>
@@ -43,7 +46,7 @@
                 <div id="exam-list">
                     <% exams.forEach(exam => { %>
                         <div class="exam-card shadow-sm" onclick="selectExam('<%= exam.name %>', this)">
-                            <div class="fw-bold text-truncate" style="max-width: 80%;"><%= exam.name %></div>
+                           <div class="fw-bold text-truncate" style="max-width: 80%;"><%= exam.name %></div>
                             <small class="text-muted" style="font-size: 10px;">ID: <%= exam.id %></small>
                             <i class="bi bi-trash3-fill delete-icon" onclick="deleteExam('<%= exam.id %>', event)"></i>
                         </div>
@@ -79,7 +82,7 @@
                 const list = document.getElementById('vlt-list');
                 list.innerHTML = filtered.length ? filtered.reverse().map(v => `
                     <div class="vlt-item p-2 d-flex align-items-center shadow-sm">
-                        <div class="flex-grow-1">
+                         <div class="flex-grow-1">
                             <div class="fw-bold" style="font-size: 0.9rem;">${v.user}</div>
                             <div class="text-danger small fw-bold">${v.reason}</div>
                             <small class="text-muted">${v.time}</small>
