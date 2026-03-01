@@ -10,7 +10,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.set('view engine', 'ejs');
 app.use(session({
-    secret: 'super-vip-security-2026',
+    secret: 'secure-system-auth-2026',
     resave: false,
     saveUninitialized: true
 }));
@@ -20,7 +20,11 @@ const USERS_FILE = 'users.json';
 const uploadDir = path.join(__dirname, 'public/violations');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-const readData = (file) => fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+const readData = (file) => {
+    try {
+        return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+    } catch (e) { return []; }
+};
 const writeData = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2));
 
 let violations = []; 
@@ -44,23 +48,35 @@ app.get('/dashboard', (req, res) => {
     if (!req.session.user) return res.redirect('/login');
     const exams = readData(EXAMS_FILE);
     if (req.session.user.role === 'TEA') {
-        res.render('teacher-dashboard', { user: req.session.user, exams, violations });
+        res.render('teacher-dashboard', { user: req.session.user, exams });
     } else {
         res.render('student-dashboard', { user: req.session.user, exams });
     }
 });
 
 app.post('/publish-exam', (req, res) => {
-    const { examName, examLink, useAI, useAntiTab, useVM } = req.body;
+    const { examName, examLink, useAI, useAntiTab, useAntiVM } = req.body;
     const exams = readData(EXAMS_FILE);
     exams.push({
-        id: Date.now(),
+        id: Date.now().toString(),
         name: examName,
         link: examLink,
-        settings: { ai: useAI === 'on', antiTab: useAntiTab === 'on', vm: useVM === 'on' }
+        settings: { 
+            ai: useAI === 'on', 
+            antiTab: useAntiTab === 'on',
+            antiVM: useAntiVM === 'on' 
+        }
     });
     writeData(EXAMS_FILE, exams);
     res.redirect('/dashboard');
+});
+
+app.post('/delete-exam', (req, res) => {
+    const { examId } = req.body;
+    let exams = readData(EXAMS_FILE);
+    const newExams = exams.filter(e => String(e.id) !== String(examId));
+    writeData(EXAMS_FILE, newExams);
+    res.json({ success: true });
 });
 
 app.get('/get-violations', (req, res) => res.json(violations));
@@ -74,4 +90,4 @@ app.post('/report-violation', (req, res) => {
 });
 
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/login'); });
-app.listen(3000, () => console.log('Server running at http://localhost:3000'));
+app.listen(3000, () => console.log('Hệ thống chạy tại http://localhost:3000'));
