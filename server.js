@@ -30,8 +30,20 @@ const writeData = (file, data) => fs.writeFileSync(file, JSON.stringify(data, nu
 let violations = []; 
 
 app.get('/', (req, res) => req.session.user ? res.redirect('/dashboard') : res.redirect('/login'));
-app.get('/login', (req, res) => res.render('login', { error: null }));
 
+app.get('/register', (req, res) => res.render('register', { error: null, success: null }));
+app.post('/register', (req, res) => {
+    const { user, pass, role } = req.body;
+    let users = readData(USERS_FILE);
+    if (users.find(u => u.user === user)) {
+        return res.render('register', { error: 'Tài khoản đã tồn tại!', success: null });
+    }
+    users.push({ user, pass, role: role || 'STU' });
+    writeData(USERS_FILE, users);
+    res.render('register', { error: null, success: 'Đăng ký thành công! Hãy đăng nhập.' });
+});
+
+app.get('/login', (req, res) => res.render('login', { error: null }));
 app.post('/login', (req, res) => {
     const { user, pass } = req.body;
     const users = readData(USERS_FILE);

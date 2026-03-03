@@ -22,7 +22,10 @@
 </head>
 <body>
     <nav class="navbar navbar-dark bg-primary shadow-sm">
-        <div class="container-fluid"><span class="navbar-brand mb-0 h1">Hệ Thống Thi: <%= user.user %></span></div>
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">Hệ Thống Thi: <%= user.user %></span>
+            <a href="/logout" class="btn btn-outline-light btn-sm">Đăng xuất</a>
+        </div>
     </nav>
 
     <div class="container-fluid py-2">
@@ -30,16 +33,21 @@
             <div class="col-lg-9 order-2 order-lg-1">
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-white py-2">
-                        <select id="exam-select" class="form-select form-select-sm" onchange="startExam()">
-                            <option value="">-- Chọn bài thi --</option>
-                            <% exams.forEach(exam => { %>
-                                <option value="<%= exam.link %>" data-name="<%= exam.name %>" data-settings='<%= JSON.stringify(exam.settings) %>'><%= exam.name %></option>
-                            <% }) %>
-                        </select>
+                        <div id="exam-control" class="d-none"> <div class="input-group">
+                                <select id="exam-select" class="form-select form-select-sm">
+                                    <option value="">-- Chọn bài thi --</option>
+                                    <% exams.forEach(exam => { %>
+                                        <option value="<%= exam.link %>" data-name="<%= exam.name %>" data-settings='<%= JSON.stringify(exam.settings) %>'><%= exam.name %></option>
+                                    <% }) %>
+                                </select>
+                                <button class="btn btn-primary btn-sm" onclick="startExam()">VÀO THI / XEM LẠI</button>
+                            </div>
+                        </div>
+                        <div id="cam-warning" class="text-danger small fw-bold">Yêu cầu kích hoạt Camera để bắt đầu bài thi.</div>
                     </div>
                     <div class="card-body p-1">
                         <iframe id="exam-frame" class="d-none"></iframe>
-                        <div id="no-exam" class="text-center py-5"><p class="text-muted">Vui lòng chọn bài thi và kích hoạt Camera.</p></div>
+                        <div id="no-exam" class="text-center py-5"><p class="text-muted">Hệ thống đang chờ lệnh...</p></div>
                     </div>
                 </div>
             </div>
@@ -65,6 +73,9 @@
         const overlay = document.getElementById("camera-overlay");
         const examFrame = document.getElementById("exam-frame");
         const noExamDiv = document.getElementById("no-exam");
+        const examControl = document.getElementById("exam-control");
+        const camWarning = document.getElementById("cam-warning");
+
         let faceDetection = null, currentExam = null, timer = null;
 
         function isVM() {
@@ -82,7 +93,7 @@
         }
 
         async function initAI() {
-            overlay.innerHTML = "<small>Đ Đang tải AI...</small>";
+            overlay.innerHTML = "<small>Đang tải AI...</small>";
             faceDetection = new FaceDetection({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${f}` });
             faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.6 });
             faceDetection.onResults(onResults);
@@ -93,6 +104,8 @@
             camera.start().then(() => {
                 overlay.style.display = "none";
                 aiStatus.innerText = "Camera: Sẵn sàng";
+                examControl.classList.remove('d-none'); // Hiện điều khiển thi
+                camWarning.classList.add('d-none'); // Ẩn cảnh báo
             }).catch(err => { overlay.innerHTML = "<small class='text-danger'>Lỗi Camera!</small>"; });
         }
 
@@ -123,7 +136,6 @@
                 noExamDiv.classList.remove('d-none');
                 return;
             }
-
             examFrame.src = currentExam.link;
             examFrame.classList.remove('d-none');
             noExamDiv.classList.add('d-none');
@@ -142,7 +154,8 @@
         function resetTimer() { clearInterval(timer); timer = null; countdownUI.style.display = "none"; }
 
         function report(reason) {
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             fetch('/report-violation', {
                 method: 'POST',

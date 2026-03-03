@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "1772413085559",
+    "name": "test",
+    "link": "https://docs.google.com/forms/d/e/1FAIpQLScYLwiB1ylRbGkbLXfMIYHtCq3X_hHhOAsEYQUNXtS-Hd3f8A/viewform?usp=header",
+    "settings": {
+      "ai": true,
+      "antiTab": true,
+      "antiVM": true
+    }
+  }
+]
